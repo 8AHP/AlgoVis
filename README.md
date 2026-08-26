@@ -33,6 +33,7 @@ This project strictly follows the Separation of Concerns principle. Instead of d
 - **START:** Begins the continuous algorithm execution.
 - **CLEAR:** Wipes all walls, open/closed sets, and paths, resetting the board while keeping the Start and End nodes.
 - **Delay (- / +):** Decreases or increases the delay between algorithm steps.
+- **MAZE:** Generate a random maze automatically. 
 
 ## How to Run
 
