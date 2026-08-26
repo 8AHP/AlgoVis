@@ -1,4 +1,3 @@
-# AlgorithmVis
 # Interactive Pathfinding Visualizer
 
 A modular, interactive Python application built with Pygame that visually demonstrates the Breadth-First Search (BFS) algorithm on a 2D grid. This project was built to explore algorithmic visualization, event-driven UI design, and clean software architecture.
