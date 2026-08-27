@@ -83,3 +83,17 @@ def bfs_generator(grid, start_node, end_node):
 
     # Signal completion: algorithm is not running
     yield (False, False)
+    
+    
+
+# The Algorithm Registry
+# Maps a display name to the actual generator function.
+# This allows the UI to dynamically select algorithms without 
+# hardcoding if/else logic in the main event loop.
+ALGORITHM_REGISTRY = {
+    "BFS": bfs_generator,
+    # We will add the others as we build them
+    # "DFS": dfs_generator,
+    # "A*": astar_generator,
+    # "Dijkstra": dijkstra_generator
+}

@@ -1,8 +1,8 @@
 # Configuration constants for the visualizer
 # All values are centralized to prevent magic numbers in the codebase
 CONFIG = {
-    "ROWS": 22,
-    "COLS": 22,
+    "ROWS": 30,
+    "COLS": 30,
     "NODE_SIZE": 25,
     # Changed from 2 to 1 to allow the borders to touch and form a continuous grid
     "MARGIN": 1, 
@@ -14,8 +14,8 @@ CONFIG = {
         "WALL": (44, 62, 80),
         "START": (39, 174, 96),
         "END": (192, 57, 43),
-        "OPEN": (171, 183, 183),
-        "CLOSED": (149, 165, 166),
+        "OPEN": (150, 200, 250),
+        "CLOSED": (15, 82, 186),
         "PATH": (241, 196, 15)
     }
 }
