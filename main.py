@@ -6,6 +6,7 @@ from config import CONFIG
 from node import Node
 from algorithms import bfs_generator
 from ui import Button
+from maze_generator import recursive_backtracker_generator
 
 # --- Window and Layout Configuration ---
 # Calculate the exact pixel dimensions of the grid itself
@@ -63,6 +64,9 @@ def main():
     
     # Initialize the step counter to track algorithm progress
     step_count = 0
+    # Maze generation state
+    maze_gen = None
+    is_generating_maze = False
 
     # --- UI Initialization ---
     btn_width = 80
@@ -73,6 +77,7 @@ def main():
     start_btn = Button(btn_margin, 10, btn_width, btn_height, "START", (39, 174, 96), (255, 255, 255))
     step_counter_btn = Button(btn_margin * 2 + btn_width, 10, 100, btn_height, "STEPS: 0", (41, 128, 185), (255, 255, 255))
     clear_btn = Button(btn_margin * 3 + btn_width + 100, 10, btn_width, btn_height, "CLEAR", (192, 57, 43), (255, 255, 255))
+    maze_btn = Button(btn_margin * 4 + btn_width * 2 + 100, 10, btn_width, btn_height, "MAZE", (142, 68, 173), (255, 255, 255))
     
     # Bottom Bar Buttons (Speed Controls)
     speed_down_btn = Button(btn_margin, WINDOW_HEIGHT - BOTTOM_BAR_HEIGHT + 10, 40, btn_height, "-", (127, 140, 141), (255, 255, 255))
@@ -90,15 +95,20 @@ def main():
 
             # Handle UI Button Clicks (Left click only)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if start_btn.is_clicked(event) and not is_running:
+                if start_btn.is_clicked(event) and not is_running and not is_generating_maze:
                     # Reset step count when starting a new run
                     step_count = 0
                     step_counter_btn.update_text(f"STEPS: {step_count}")
                     algorithm_gen = bfs_generator(grid, start_node, end_node)
                     is_running = True
                     
+                elif maze_btn.is_clicked(event) and not is_running and not is_generating_maze:
+                    # Start maze generation
+                    maze_gen = recursive_backtracker_generator(grid, start_node, end_node)
+                    is_generating_maze = True
+                    
                 elif clear_btn.is_clicked(event):
-                    # Reset grid, step count, and generator
+                    # Reset grid, step count, and generators
                     step_count = 0
                     step_counter_btn.update_text(f"STEPS: {step_count}")
                     for r in range(CONFIG["ROWS"]):
@@ -106,14 +116,16 @@ def main():
                             if grid[r][c].state not in ["START", "END"]:
                                 grid[r][c].set_state("EMPTY")
                     algorithm_gen = None
+                    maze_gen = None
                     is_running = False
+                    is_generating_maze = False
                     
-                elif speed_up_btn.is_clicked(event):
+                elif speed_down_btn.is_clicked(event):
                     if speed_delay < 20:
                         speed_delay += 1
                         speed_text_btn.update_text(f"Delay: {speed_delay}")
                         
-                elif speed_down_btn.is_clicked(event):
+                elif speed_up_btn.is_clicked(event):
                     if speed_delay > 1:
                         speed_delay -= 1
                         speed_text_btn.update_text(f"Delay: {speed_delay}")
@@ -171,6 +183,19 @@ def main():
                     # Fallback safety net if the generator exhausts without yielding (False, False)
                     is_running = False
                     algorithm_gen = None
+        # 3. Maze Generation Execution (Non-blocking speed control)
+        if is_generating_maze and maze_gen is not None:
+            frame_counter += 1
+            
+            # Only advance the maze generation if enough frames have passed
+            if frame_counter >= speed_delay:
+                frame_counter = 0
+                try:
+                    next(maze_gen)
+                except StopIteration:
+                    # Maze generation is complete
+                    is_generating_maze = False
+                    maze_gen = None
 
         # 3. Rendering
         # Clear the screen with the background color to prevent the black screen issue
@@ -181,6 +206,7 @@ def main():
         start_btn.draw(screen)
         step_counter_btn.draw(screen)
         clear_btn.draw(screen)
+        maze_btn.draw(screen)
         
         # Draw Bottom Bar Background and Buttons
         pygame.draw.rect(screen, (236, 240, 241), (0, WINDOW_HEIGHT - BOTTOM_BAR_HEIGHT, WINDOW_WIDTH, BOTTOM_BAR_HEIGHT))

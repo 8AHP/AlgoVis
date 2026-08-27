@@ -10,6 +10,7 @@ A modular, interactive Python application built with Pygame that visually demons
 - **Interactive Grid:** Click to place walls, set start points, and define targets. 
 - **Path Reconstruction:** Automatically traces and highlights the shortest path once the target is found.
 - **Modular Architecture:** Cleanly separated concerns across multiple files for maintainability and scalability.
+- **Automatic Maze Generation:** the "MAZE" button instantly generate a perfect, solvable maze using the Recursive Backtracker algorithm.
 
 ## Architecture
 
@@ -32,6 +33,7 @@ This project strictly follows the Separation of Concerns principle. Instead of d
 - **START:** Begins the continuous algorithm execution.
 - **CLEAR:** Wipes all walls, open/closed sets, and paths, resetting the board while keeping the Start and End nodes.
 - **Delay (- / +):** Decreases or increases the delay between algorithm steps.
+- **MAZE:** Generate a random maze automatically. 
 
 ## How to Run
 
