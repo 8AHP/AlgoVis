@@ -35,7 +35,7 @@ def recursive_backtracker_generator(grid, start_node, end_node):
     while stack:
         current = stack[-1]  # Peek at the top of the stack
         
-        # Find all unvisited neighbors (walls that are 2 cells away)
+        # Find all unvisited neighbors (cells that are 2 steps away)
         unvisited_neighbors = []
         
         for dr, dc in directions:
@@ -47,12 +47,22 @@ def recursive_backtracker_generator(grid, start_node, end_node):
             if 0 <= neighbor_row < CONFIG["ROWS"] and 0 <= neighbor_col < CONFIG["COLS"]:
                 neighbor = grid[neighbor_row][neighbor_col]
                 
-                # Check if the neighbor is still a wall and not start/end
-                if neighbor.state == "WALL" and neighbor != start_node and neighbor != end_node:
-                    unvisited_neighbors.append((neighbor, dr, dc))
+                # Calculate the wall exactly between the current cell and the neighbor
+                wall_row = current.row + dr
+                wall_col = current.col + dc
+                wall = grid[wall_row][wall_col]
+                
+                # A neighbor is valid if it is an uncarved WALL, OR if it is the Start/End node 
+                # AND the wall connecting them hasn't been carved yet.
+                is_walkable = neighbor.state == "EMPTY"
+                is_start_end = neighbor == start_node or neighbor == end_node
+                
+                if not is_walkable and (neighbor.state == "WALL" or is_start_end):
+                    if wall.state == "WALL":
+                        unvisited_neighbors.append((neighbor, dr, dc))
         
         if unvisited_neighbors:
-            # Choose a random unvisited neighbor
+            # Choose a random valid neighbor
             chosen_neighbor, dr, dc = random.choice(unvisited_neighbors)
             
             # Calculate the wall between current and chosen neighbor
@@ -60,13 +70,15 @@ def recursive_backtracker_generator(grid, start_node, end_node):
             wall_col = current.col + dc
             wall = grid[wall_row][wall_col]
             
-            # Carve the passage: remove the wall and mark the neighbor as visited
-            if wall != start_node and wall != end_node:
-                wall.set_state("EMPTY")
+            # Carve the connecting wall to ensure a path exists
+            wall.set_state("EMPTY")
             
-            chosen_neighbor.set_state("EMPTY")
-            stack.append(chosen_neighbor)
-            
+            # Carve the neighbor cell ONLY if it is not the Start or End node.
+            # We connect to them, but we do not change their identity or add them to the stack.
+            if chosen_neighbor != start_node and chosen_neighbor != end_node:
+                chosen_neighbor.set_state("EMPTY")
+                stack.append(chosen_neighbor)
+                
             # Yield control to allow visualization of this step
             yield True
         else:
@@ -76,9 +88,6 @@ def recursive_backtracker_generator(grid, start_node, end_node):
             # Yield occasionally during backtracking for smoother visualization
             if len(stack) % 5 == 0:
                 yield True
-    
-    # Signal completion
-    yield False
 
 def get_maze_neighbors(cell, grid):
     """
