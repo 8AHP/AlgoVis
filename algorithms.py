@@ -83,3 +83,80 @@ def bfs_generator(grid, start_node, end_node):
 
     # Signal completion: algorithm is not running
     yield (False, False)
+
+def dfs_generator(grid, start_node, end_node):
+    """
+    Generator function for the Depth-First Search algorithm.
+    Explores the grid by diving deep into paths and backtracking upon hitting dead ends.
+    Uses a Stack (LIFO) for traversal.
+    Yields a tuple: (is_running, is_exploring).
+    """
+    # Initialize the stack using a standard Python list for O(1) append and pop
+    stack = [start_node]
+    
+    # Dictionary to track the path and visited nodes.
+    # CRITICAL: Nodes are added here when PUSHED to the stack, not when popped,
+    # to prevent exponential stack duplication.
+    came_from = {start_node: None}
+
+    while stack:
+        # Get the most recently discovered node from the top of the stack
+        current = stack.pop()
+
+        # Check if we have reached the target
+        if current == end_node:
+            break
+
+        # Mark the current node as fully explored, protecting the start node
+        if current != start_node:
+            current.set_state("CLOSED")
+
+        # Get valid neighboring nodes
+        for neighbor in get_neighbors(current, grid):
+            # Only process empty nodes or the end node itself
+            if neighbor.state == "EMPTY" or neighbor == end_node:
+                # If the neighbor hasn't been discovered yet
+                if neighbor not in came_from:
+                    came_from[neighbor] = current
+                    
+                    # Protect the end node from being overwritten to "OPEN"
+                    if neighbor != end_node:
+                        neighbor.set_state("OPEN")
+                        
+                    # Push the neighbor onto the stack
+                    stack.append(neighbor)
+                    
+                    # Yield control to visualize the stack expanding
+                    yield (True, True)
+        
+        # Yield control to the main loop to render the current frame
+        yield (True, True)
+
+    # --- Path Reconstruction Phase ---
+    # Identical to BFS: trace the path back to the start if the end was found
+    if end_node in came_from:
+        current = end_node
+        end_state = end_node.state 
+        
+        while current is not None:
+            if current != start_node and current != end_node:
+                current.set_state("PATH")
+            current = came_from[current]
+            yield (True, False)
+            
+        end_node.set_state(end_state)
+
+    # Signal completion
+    yield (False, False)
+
+# The Algorithm Registry
+# Maps a display name to the actual generator function.
+# This allows the UI to dynamically select algorithms without 
+# hardcoding if/else logic in the main event loop.
+ALGORITHM_REGISTRY = {
+    "BFS": bfs_generator,
+    "DFS": dfs_generator,
+    # We will add the others as we build them
+    # "A*": astar_generator,
+    # "Dijkstra": dijkstra_generator
+}
