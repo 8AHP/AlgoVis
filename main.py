@@ -4,9 +4,10 @@ import sys
 # Import our modular components
 from config import CONFIG
 from node import Node
-from algorithms import bfs_generator
+from algorithms import ALGORITHM_REGISTRY
 from ui import Button
 from maze_generator import recursive_backtracker_generator
+from file_handler import open_blueprint_dialog, load_blueprint
 
 # --- Window and Layout Configuration ---
 # Calculate the exact pixel dimensions of the grid itself
@@ -67,17 +68,50 @@ def main():
     # Maze generation state
     maze_gen = None
     is_generating_maze = False
-
-    # --- UI Initialization ---
-    btn_width = 80
+    
+    # --- Algorithm Selection State ---
+    # Get the list of available algorithm names from the registry
+    available_algorithms = list(ALGORITHM_REGISTRY.keys())
+    current_algo_index = 0
+    current_algo_name = available_algorithms[current_algo_index]
+    
+        # --- UI Initialization ---
+    # Define standard dimensions
     btn_height = 30
     btn_margin = 10
     
-    # Top Bar Buttons
-    start_btn = Button(btn_margin, 10, btn_width, btn_height, "START", (39, 174, 96), (255, 255, 255))
-    step_counter_btn = Button(btn_margin * 2 + btn_width, 10, 100, btn_height, "STEPS: 0", (41, 128, 185), (255, 255, 255))
-    clear_btn = Button(btn_margin * 3 + btn_width + 100, 10, btn_width, btn_height, "CLEAR", (192, 57, 43), (255, 255, 255))
-    maze_btn = Button(btn_margin * 4 + btn_width * 2 + 100, 10, btn_width, btn_height, "MAZE", (142, 68, 173), (255, 255, 255))
+    # Define specific widths for each button to accommodate text
+    algo_width = 80
+    start_width = 80
+    step_width = 100
+    clear_width = 80
+    maze_width = 80
+    blueprint_width = 100
+
+    # Calculate X positions sequentially to prevent any overlapping
+    current_x = btn_margin
+    
+    # 1. Algorithm Selector
+    algo_select_btn = Button(current_x, 10, algo_width, btn_height, current_algo_name, (52, 73, 94), (255, 255, 255))
+    current_x += algo_width + btn_margin
+    
+    # 2. Start Button
+    start_btn = Button(current_x, 10, start_width, btn_height, "START", (39, 174, 96), (255, 255, 255))
+    current_x += start_width + btn_margin
+    
+    # 3. Step Counter
+    step_counter_btn = Button(current_x, 10, step_width, btn_height, "STEPS: 0", (41, 128, 185), (255, 255, 255))
+    current_x += step_width + btn_margin
+    
+    # 4. Clear Button
+    clear_btn = Button(current_x, 10, clear_width, btn_height, "CLEAR", (192, 57, 43), (255, 255, 255))
+    current_x += clear_width + btn_margin
+    
+    # 5. Maze Button
+    maze_btn = Button(current_x, 10, maze_width, btn_height, "MAZE", (142, 68, 173), (255, 255, 255))
+    current_x += maze_width + btn_margin
+    # 6. Blueprint Button
+    blueprint_btn = Button(current_x, 10, blueprint_width, btn_height, "BLUEPRINT", (211, 84, 0), (255, 255, 255))
     
     # Bottom Bar Buttons (Speed Controls)
     speed_down_btn = Button(btn_margin, WINDOW_HEIGHT - BOTTOM_BAR_HEIGHT + 10, 40, btn_height, "-", (127, 140, 141), (255, 255, 255))
@@ -95,18 +129,56 @@ def main():
 
             # Handle UI Button Clicks (Left click only)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if start_btn.is_clicked(event) and not is_running and not is_generating_maze:
-                    # Reset step count when starting a new run
+                
+                # Cycle through available algorithms
+                if algo_select_btn.is_clicked(event) and not is_running and not is_generating_maze:
+                    current_algo_index = (current_algo_index + 1) % len(available_algorithms)
+                    current_algo_name = available_algorithms[current_algo_index]
+                    algo_select_btn.update_text(current_algo_name)
+                
+                # Start the dynamically selected algorithm
+                elif start_btn.is_clicked(event) and not is_running and not is_generating_maze:
                     step_count = 0
                     step_counter_btn.update_text(f"STEPS: {step_count}")
-                    algorithm_gen = bfs_generator(grid, start_node, end_node)
-                    is_running = True
                     
+                    # Fetch the correct generator function from the registry
+                    selected_generator_func = ALGORITHM_REGISTRY[current_algo_name]
+                    
+                    # Initialize the generator
+                    algorithm_gen = selected_generator_func(grid, start_node, end_node)
+                    is_running = True
+                
                 elif maze_btn.is_clicked(event) and not is_running and not is_generating_maze:
                     # Start maze generation
                     maze_gen = recursive_backtracker_generator(grid, start_node, end_node)
                     is_generating_maze = True
+                
+                elif blueprint_btn.is_clicked(event) and not is_running and not is_generating_maze:
+                    # 1. Open the OS file dialog
+                    file_path = open_blueprint_dialog()
                     
+                    if file_path:
+                        try:
+                            # 2. Clear the current algorithm and step counter
+                            step_count = 0
+                            step_counter_btn.update_text(f"STEPS: {step_count}")
+                            algorithm_gen = None
+                            
+                            # 3. Load and apply the blueprint
+                            new_start, new_end = load_blueprint(file_path, grid)
+                            
+                            # 4. Update the global start and end node references
+                            start_node = new_start
+                            end_node = new_end
+                            
+                        except ValueError as e:
+                            # If the file is malformed, print the error to the console.
+                            # In a production app, we would render this to the screen, 
+                            # but for now, console output is sufficient for debugging.
+                            print(f"Blueprint Error: {e}")
+                        except Exception as e:
+                            print(f"Failed to read file: {e}")
+                
                 elif clear_btn.is_clicked(event):
                     # Reset grid, step count, and generators
                     step_count = 0
@@ -183,6 +255,7 @@ def main():
                     # Fallback safety net if the generator exhausts without yielding (False, False)
                     is_running = False
                     algorithm_gen = None
+
         # 3. Maze Generation Execution (Non-blocking speed control)
         if is_generating_maze and maze_gen is not None:
             frame_counter += 1
@@ -197,16 +270,18 @@ def main():
                     is_generating_maze = False
                     maze_gen = None
 
-        # 3. Rendering
+        # 4. Rendering
         # Clear the screen with the background color to prevent the black screen issue
         screen.fill(CONFIG["COLORS"]["BACKGROUND"])
         
         # Draw Top Bar Background and Buttons
         pygame.draw.rect(screen, (236, 240, 241), (0, 0, WINDOW_WIDTH, TOP_BAR_HEIGHT))
+        algo_select_btn.draw(screen)
         start_btn.draw(screen)
         step_counter_btn.draw(screen)
         clear_btn.draw(screen)
         maze_btn.draw(screen)
+        blueprint_btn.draw(screen)
         
         # Draw Bottom Bar Background and Buttons
         pygame.draw.rect(screen, (236, 240, 241), (0, WINDOW_HEIGHT - BOTTOM_BAR_HEIGHT, WINDOW_WIDTH, BOTTOM_BAR_HEIGHT))
